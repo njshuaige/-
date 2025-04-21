@@ -145,3 +145,4 @@ def chess_detect(img, debug=False):
         cv2.imshow("img_chess", img_chess)
 
     return black_coords, white_coords, black_contours, white_contours
+
