@@ -1,8 +1,9 @@
 import cv2
 import time
-from process import Detector  # 你已有的棋盘检测器
-import chess_detect           # 你已有的棋子检测模块
-from grid import GRID         # 我们刚刚写好的 GRID 类
+from process import Detector       # 棋盘检测器
+import chess_detect                # 棋子检测模块
+from grid import GRID              # 网格类
+from send import Sender   # 串口发送模块
 
 cap = cv2.VideoCapture(1)
 detector = Detector()
@@ -11,11 +12,13 @@ if not cap.isOpened():
     print("摄像头无法打开！") 
     exit()
 
-# 记录上次打印的时间
 last_print_time = time.time()
-
-# 初始化 grid 类的占位对象
 grid_instance = None
+
+# 初始化串口发送器
+port = 'COM9'   # 请根据实际情况修改串口号
+baudrate = 9600
+sender = Sender(port, baudrate)
 
 while True:
     ret, frame = cap.read()
@@ -34,7 +37,7 @@ while True:
         }
         grid_instance = GRID(config)
 
-    # 每隔2秒打印一次棋子状态
+    # 每隔2秒打印一次棋子状态并发送坐标
     current_time = time.time()
     if current_time - last_print_time >= 2:
         black, white, _, _ = chess_detect.chess_detect(frame, debug=True)
@@ -48,6 +51,13 @@ while True:
             for row in grid_status:
                 print(row)
 
+            # 如果黑棋或白棋数量都不为0，可以选择将前两个点发给下位机
+            if len(black) >= 1 and len(white) >= 1:
+                try:
+                    sender.send_packed_data(black[0], white[0])  # 发第一个黑棋和第一个白棋坐标
+                except Exception as e:
+                    print("串口发送失败：", e)
+
         last_print_time = current_time
 
     cv2.imshow("Frame with Yellow Rectangle and Grid", yellow)
@@ -57,3 +67,4 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
+
